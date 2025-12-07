@@ -40,3 +40,21 @@ SELECT create_hypertable('weather_measurements', 'time', if_not_exists => TRUE);
 
 -- Indexes for Weather
 CREATE INDEX IF NOT EXISTS ix_weather_city_time ON weather_measurements (city, time DESC);
+
+-- Create Flood Alerts Table
+CREATE TABLE IF NOT EXISTS flood_alerts (
+    time TIMESTAMPTZ NOT NULL,
+    station TEXT NOT NULL,
+    water_level DOUBLE PRECISION,
+    warning_level DOUBLE PRECISION,
+    danger_level DOUBLE PRECISION,
+    status TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (station, time)
+);
+
+-- Turn into Hypertable partitioned by time
+SELECT create_hypertable('flood_alerts', 'time', if_not_exists => TRUE);
+
+-- Indexes for Flood
+CREATE INDEX IF NOT EXISTS ix_flood_station_time ON flood_alerts (station, time DESC);

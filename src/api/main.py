@@ -50,6 +50,17 @@ class Weather(BaseModel):
     class Config:
         from_attributes = True
 
+class FloodAlert(BaseModel):
+    time: datetime
+    station: str
+    water_level: float
+    warning_level: float
+    danger_level: float
+    status: str
+
+    class Config:
+        from_attributes = True
+
 # Endpoints
 @app.get("/")
 def read_root():
@@ -112,6 +123,30 @@ async def get_weather(
         async with app.state.pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
             return [Weather(**dict(row)) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/flood", response_model=List[FloodAlert])
+async def get_flood_alerts(
+    station: Optional[str] = None,
+    limit: int = Query(100, le=1000)
+):
+    query = "SELECT time, station, water_level, warning_level, danger_level, status FROM flood_alerts WHERE 1=1"
+    params = []
+    param_count = 1
+
+    if station:
+        query += f" AND station = ${param_count}"
+        params.append(station)
+        param_count += 1
+    
+    query += f" ORDER BY time DESC LIMIT ${param_count}"
+    params.append(limit)
+
+    try:
+        async with app.state.pool.acquire() as conn:
+            rows = await conn.fetch(query, *params)
+            return [FloodAlert(**dict(row)) for row in rows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

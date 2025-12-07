@@ -127,6 +127,39 @@ if weather_data:
     st.subheader("Recent measurements")
     st.dataframe(wdf)
 
+# Flood Alerts Section
+st.markdown("---")
+st.title("🌊 River Watch (Flood Alerts)")
+
+@st.cache_data(ttl=60)
+def fetch_flood_alerts():
+    try:
+        response = requests.get(f"{API_URL}/flood")
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except Exception:
+        return []
+
+flood_data = fetch_flood_alerts()
+if flood_data:
+    fdf = pd.DataFrame(flood_data)
+    
+    # Latest status per station
+    latest_flood = fdf.sort_values('time', ascending=False).drop_duplicates('station')
+    
+    for _, row in latest_flood.iterrows():
+        status_color = "red" if row['status'] == "Danger" else "orange" if row['status'] == "Warning" else "green"
+        with st.container():
+            col1, col2, col3, col4 = st.columns(4)
+            col1.markdown(f"**{row['station']}**")
+            col2.metric("Water Level", f"{row['water_level']}m")
+            col3.metric("Danger Level", f"{row['danger_level']}m")
+            col4.markdown(f":{status_color}[**{row['status']}**]")
+
+    st.subheader("Recent River Levels")
+    st.dataframe(fdf)
+
 # Footer
 st.markdown("---")
 st.markdown("Built with **FastAPI**, **TimescaleDB**, **Apache Kafka** & **Streamlit**")
