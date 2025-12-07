@@ -76,5 +76,20 @@ services:
     depends_on:
       - api
 
+  processing:
+    build:
+      context: .
+      dockerfile: src/processing/Dockerfile
+    container_name: nepaldatahubplatform-processing
+    depends_on:
+      - kafka
+      - redis
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - REDIS_URL=redis:6379/0
+    networks:
+      - default
+    restart: always
+
 volumes:
   timescaledb_data:
