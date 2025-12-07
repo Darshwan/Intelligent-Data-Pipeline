@@ -40,10 +40,9 @@ services:
     ports:
       - "6379:6379"
 
-  ingestion:
+  earthquake-pipeline:
     build:
-      context: .
-      dockerfile: src/ingestion/Dockerfile
+      context: ./pipelines/earthquake
     depends_on:
       - kafka
       - timescaledb
@@ -52,10 +51,21 @@ services:
       DATABASE_URL: postgresql://postgres:password@timescaledb:5432/nepaldatalab
     restart: always
 
-  api:
+  weather-pipeline:
     build:
-      context: .
-      dockerfile: src/api/Dockerfile
+      context: ./pipelines/weather
+    depends_on:
+      - kafka
+      - timescaledb
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      DATABASE_URL: postgresql://postgres:password@timescaledb:5432/nepaldatalab
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
+    restart: always
+
+  api-gateway:
+    build:
+      context: ./hub-core/api-gateway
     ports:
       - "8000:8000"
     depends_on:
@@ -72,23 +82,20 @@ services:
     ports:
       - "8501:8501"
     environment:
-      API_URL: http://api:8000
+      API_URL: http://api-gateway:8000
     depends_on:
-      - api
+      - api-gateway
 
-  processing:
+  data-processor:
     build:
-      context: .
-      dockerfile: src/processing/Dockerfile
-    container_name: nepaldatahubplatform-processing
+      context: ./hub-core/data-processor
+    container_name: nepaldatahubplatform-data-processor
     depends_on:
       - kafka
       - redis
     environment:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - REDIS_URL=redis:6379/0
-    networks:
-      - default
     restart: always
 
 volumes:

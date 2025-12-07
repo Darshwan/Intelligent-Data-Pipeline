@@ -119,3 +119,13 @@ async def run_weather_ingestion():
                     await save_to_db(pool, data)
             
             await asyncio.sleep(POLL_INTERVAL)
+
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    )
+    try:
+        asyncio.run(run_weather_ingestion())
+    except KeyboardInterrupt:
+        logger.info("Weather Ingestor stopped.")
