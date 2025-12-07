@@ -94,6 +94,39 @@ if data:
 else:
     st.info("No earthquake data found matching criteria.")
 
+# Weather Section
+st.markdown("---")
+st.title("Weather Conditions")
+
+@st.cache_data(ttl=60)
+def fetch_weather():
+    try:
+        response = requests.get(f"{API_URL}/weather")
+        if response.status_code == 200:
+            return response.json()
+        return []
+    except Exception:
+        return []
+
+weather_data = fetch_weather()
+if weather_data:
+    wdf = pd.DataFrame(weather_data)
+    
+    # Display latest weather for each city
+    latest_weather = wdf.sort_values('time', ascending=False).drop_duplicates('city')
+    
+    cols = st.columns(len(latest_weather))
+    for idx, (_, row) in enumerate(latest_weather.iterrows()):
+        with cols[idx % 3]: # Wrap around if many cities
+            st.metric(
+                label=row['city'],
+                value=f"{row['temperature']}°C",
+                delta=row['condition']
+            )
+    
+    st.subheader("Recent measurements")
+    st.dataframe(wdf)
+
 # Footer
 st.markdown("---")
 st.markdown("Built with **FastAPI**, **TimescaleDB**, **Apache Kafka** & **Streamlit**")

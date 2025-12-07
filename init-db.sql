@@ -22,3 +22,21 @@ SELECT create_hypertable('earthquakes', 'time', if_not_exists => TRUE);
 -- Indexes
 CREATE INDEX IF NOT EXISTS ix_earthquakes_location ON earthquakes USING GIST (location);
 CREATE INDEX IF NOT EXISTS ix_earthquakes_time ON earthquakes (time DESC);
+
+-- Create Weather Table
+CREATE TABLE IF NOT EXISTS weather_measurements (
+    time TIMESTAMPTZ NOT NULL,
+    city TEXT NOT NULL,
+    temperature DOUBLE PRECISION,
+    humidity DOUBLE PRECISION,
+    pressure DOUBLE PRECISION,
+    condition TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (city, time)
+);
+
+-- Turn into Hypertable partitioned by time
+SELECT create_hypertable('weather_measurements', 'time', if_not_exists => TRUE);
+
+-- Indexes for Weather
+CREATE INDEX IF NOT EXISTS ix_weather_city_time ON weather_measurements (city, time DESC);

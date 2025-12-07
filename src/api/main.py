@@ -39,6 +39,17 @@ class Earthquake(BaseModel):
     class Config:
         from_attributes = True
 
+class Weather(BaseModel):
+    time: datetime
+    city: str
+    temperature: Optional[float]
+    humidity: Optional[float]
+    pressure: Optional[float]
+    condition: Optional[str]
+
+    class Config:
+        from_attributes = True
+
 # Endpoints
 @app.get("/")
 def read_root():
@@ -77,6 +88,30 @@ async def get_earthquakes(
         async with app.state.pool.acquire() as conn:
             rows = await conn.fetch(query, *params)
             return [Earthquake(**dict(row)) for row in rows]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/weather", response_model=List[Weather])
+async def get_weather(
+    city: Optional[str] = None,
+    limit: int = Query(100, le=1000)
+):
+    query = "SELECT time, city, temperature, humidity, pressure, condition FROM weather_measurements WHERE 1=1"
+    params = []
+    param_count = 1
+
+    if city:
+        query += f" AND city = ${param_count}"
+        params.append(city)
+        param_count += 1
+    
+    query += f" ORDER BY time DESC LIMIT ${param_count}"
+    params.append(limit)
+
+    try:
+        async with app.state.pool.acquire() as conn:
+            rows = await conn.fetch(query, *params)
+            return [Weather(**dict(row)) for row in rows]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
