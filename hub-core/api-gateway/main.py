@@ -177,6 +177,30 @@ async def get_alerts(
     # Enrich simple records to match user expected schema roughly (alert_type, etc)
     return [{**dict(r), "alert_type": "Flood"} for r in records]
 
+@app.get("/api/v1/forex", tags=["Financial"])
+async def get_forex_rates(
+    currency: Optional[str] = None,
+    hours: int = Query(24, ge=1, le=168)
+):
+    """Get latest exchange rates (NPR)"""
+    query = """
+        SELECT time, currency, buy, sell, unit 
+        FROM forex_rates 
+        WHERE time > $1
+    """
+    params = [datetime.utcnow() - timedelta(hours=hours)]
+    
+    if currency:
+        query += f" AND currency = ${len(params) + 1}"
+        params.append(currency.upper())
+    
+    query += " ORDER BY time DESC"
+    
+    async with app.state.pool.acquire() as conn:
+        records = await conn.fetch(query, *params)
+    
+    return [dict(r) for r in records]
+
 
 @app.get("/api/v1/correlations")
 async def get_correlations():
@@ -280,6 +304,29 @@ async def get_dashboard_data():
         },
         "timestamp": datetime.utcnow().isoformat()
     }
+
+# --- Data Catalog & Metadata Endpoints ---
+
+@app.get("/api/v1/catalog", tags=["Metadata"])
+async def get_catalog():
+    """List all available datasets in the platform"""
+    async with app.state.pool.acquire() as conn:
+        records = await conn.fetch("SELECT id, name, description, schema_version, owner, created_at FROM datasets ORDER BY id")
+    return [dict(r) for r in records]
+
+@app.get("/api/v1/catalog/{dataset_name}/health", tags=["Metadata"])
+async def get_dataset_health(dataset_name: str, limit: int = 20):
+    """Get data quality logs for a specific dataset"""
+    async with app.state.pool.acquire() as conn:
+        logs = await conn.fetch("""
+            SELECT id, status, error_details, record_content, timestamp 
+            FROM data_quality_logs 
+            WHERE dataset_name = $1 
+            ORDER BY timestamp DESC 
+            LIMIT $2
+        """, dataset_name, limit)
+    
+    return [dict(r) for r in logs]
 
 # WebSocket endpoints for real-time updates
 @app.websocket("/ws/alerts")

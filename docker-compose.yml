@@ -110,7 +110,8 @@ services:
 
   data-processor:
     build:
-      context: ./hub-core/data-processor
+      context: ./hub-core
+      dockerfile: data-processor/Dockerfile
     container_name: nepaldatahubplatform-data-processor
     depends_on:
       - kafka

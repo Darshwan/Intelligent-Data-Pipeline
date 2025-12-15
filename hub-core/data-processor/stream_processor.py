@@ -5,6 +5,19 @@ import json
 from datetime import datetime
 from correlation_engine import CorrelationEngine
 
+# Monkey Patch for Faust Stores TypeError
+from faust.tables import table
+from faust import stores
+def _new_store_by_url(self, url):
+    return stores.by_url(url)(
+        url,
+        app=self.app,
+        table=self,
+    )
+table.Table._new_store_by_url = _new_store_by_url
+
+# Configure Logging
+
 # Configure Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,7 +30,7 @@ REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
 app = faust.App(
     'nepal-data-hub-processor',
     broker=f'kafka://{KAFKA_BROKER}',
-    store=REDIS_URL,
+    # store='memory://', # Use in-memory to avoid faust-streaming bug
 )
 
 # Topics
@@ -37,11 +50,24 @@ weather_table = app.Table('weather_state', default=dict)
 
 correlation_engine = CorrelationEngine()
 
+from schemas.models import EarthquakeEvent, WeatherMeasurement
+from pydantic import ValidationError
+
 @app.agent(weather_topic)
 async def process_weather(stream):
     async for value in stream:
         try:
-            data = json.loads(value.decode('utf-8'))
+            if isinstance(value, dict):
+                data = value
+            else:
+                data = json.loads(value.decode('utf-8'))
+            # Schema Validation
+            try:
+                WeatherMeasurement(**data)
+            except ValidationError as ve:
+                logger.error(f"SCHEMA VIOLATION [Weather]: {ve}")
+                continue # Skip invalid data (Simulates DLQ)
+
             city = data.get('city')
             if city:
                 weather_table[city] = data
@@ -53,8 +79,19 @@ async def process_weather(stream):
 async def process_earthquakes(stream):
     async for value in stream:
         try:
-            event = json.loads(value.decode('utf-8'))
-            logger.info(f"Processing earthquake: {event.get('id')}")
+            if isinstance(value, dict):
+                event_dict = value
+            else:
+                event_dict = json.loads(value.decode('utf-8'))
+            
+            # Schema Validation
+            try:
+                EarthquakeEvent(**event_dict)
+            except ValidationError as ve:
+                logger.error(f"SCHEMA VIOLATION [Earthquake]: {ve}")
+                continue
+
+            logger.info(f"Processing earthquake: {event_dict.get('id')}")
 
             # 1. Fetch latest weather state
             current_weather = list(weather_table.values())

@@ -75,3 +75,30 @@ SELECT create_hypertable('forex_rates', 'time', if_not_exists => TRUE);
 
 -- Indexes for Forex
 CREATE INDEX IF NOT EXISTS ix_forex_currency_time ON forex_rates (currency, time DESC);
+
+-- Metadata & Data Catalog Tables
+CREATE TABLE IF NOT EXISTS datasets (
+    id SERIAL PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    schema_version TEXT,
+    owner TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS data_quality_logs (
+    id SERIAL PRIMARY KEY,
+    dataset_name TEXT,
+    status TEXT, -- 'PASS', 'FAIL'
+    error_details TEXT,
+    record_content TEXT,
+    timestamp TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed Datasets
+INSERT INTO datasets (name, description, schema_version, owner) VALUES
+('earthquakes', 'USGS Real-time Feeds', 'v1', 'Earthquake Pipeline'),
+('weather', 'OpenWeatherMap Cities', 'v1', 'Weather Pipeline'),
+('flood_alerts', 'DHM River Levels', 'v1', 'Hydrology Pipeline'),
+('forex_rates', 'NRB Exchange Rates', 'v1', 'Forex Pipeline')
+ON CONFLICT (name) DO NOTHING;

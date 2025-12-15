@@ -135,8 +135,20 @@ st.markdown('<div class="hero-subtitle">Real-time intelligence for disaster resi
 @st.cache_data(ttl=60)
 def fetch_data():
     try:
+        data = {}
+        # 1. Main Dashboard Data
         resp = requests.get(f"{API_URL}/api/v1/dashboard", timeout=3)
-        return resp.json() if resp.status_code == 200 else {}
+        if resp.status_code == 200:
+            data = resp.json()
+        
+        # 2. Forex Data (Separate call)
+        try:
+            forex = requests.get(f"{API_URL}/api/v1/forex?limit=10", timeout=3).json()
+            data['forex'] = forex
+        except:
+            data['forex'] = []
+            
+        return data
     except:
         return {}
 
@@ -182,12 +194,15 @@ with c3:
     """, unsafe_allow_html=True)
 
 with c4:
-    outages = len(data.get('power_outages', []))
+    # Forex Card (USD)
+    forex = data.get('forex', [])
+    usd_rate = next((item['sell'] for item in forex if item['currency'] == 'USD'), 0)
+    
     st.markdown(f"""
     <div class="metric-card">
-        <div class="metric-label">Grid Status</div>
-        <div class="metric-value">{outages}</div>
-        <span class="metric-delta">Outages</span>
+        <div class="metric-label">USD / NPR</div>
+        <div class="metric-value">Rs. {usd_rate}</div>
+        <span class="metric-delta">Forex</span>
     </div>
     """, unsafe_allow_html=True)
 
