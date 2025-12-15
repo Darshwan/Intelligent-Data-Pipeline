@@ -120,7 +120,6 @@ Full interactive documentation is available at `/docs` when the service is runni
 *   **Frontend**: Streamlit (with Custom CSS/JS), Plotly, Folium
 *   **Backend**: FastAPI, AsyncPG, SSE-Starlette
 
-
 ---
 
 ## 🤝 Contributing

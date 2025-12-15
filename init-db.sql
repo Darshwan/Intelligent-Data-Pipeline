@@ -58,3 +58,20 @@ SELECT create_hypertable('flood_alerts', 'time', if_not_exists => TRUE);
 
 -- Indexes for Flood
 CREATE INDEX IF NOT EXISTS ix_flood_station_time ON flood_alerts (station, time DESC);
+
+-- Create Forex Table
+CREATE TABLE IF NOT EXISTS forex_rates (
+    time TIMESTAMPTZ NOT NULL,
+    currency TEXT NOT NULL,
+    buy DOUBLE PRECISION,
+    sell DOUBLE PRECISION,
+    unit INTEGER DEFAULT 1,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (currency, time)
+);
+
+-- Turn into Hypertable partitioned by time
+SELECT create_hypertable('forex_rates', 'time', if_not_exists => TRUE);
+
+-- Indexes for Forex
+CREATE INDEX IF NOT EXISTS ix_forex_currency_time ON forex_rates (currency, time DESC);

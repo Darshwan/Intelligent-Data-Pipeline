@@ -63,6 +63,28 @@ services:
       OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
     restart: always
 
+  hydrology-pipeline:
+    build:
+      context: ./pipelines/hydrology
+    depends_on:
+      - kafka
+      - timescaledb
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      DATABASE_URL: postgresql://postgres:password@timescaledb:5432/nepaldatalab
+    restart: always
+
+  forex-pipeline:
+    build:
+      context: ./pipelines/forex
+    depends_on:
+      - kafka
+      - timescaledb
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      DATABASE_URL: postgresql://postgres:password@timescaledb:5432/nepaldatalab
+    restart: always
+
   api-gateway:
     build:
       context: ./hub-core/api-gateway
